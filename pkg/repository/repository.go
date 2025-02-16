@@ -5,12 +5,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"github.com/sirupsen/logrus"
 )
 
 type Article interface {
 	Create(input blogging.Article) (uuid.UUID, error)
 	GetAll() ([]blogging.Article, error)
+	GetByID(id uuid.UUID) (blogging.Article, error)
+	Update(id uuid.UUID, input blogging.ArticleToUpdate) error
+	Delete(id uuid.UUID) error
 }
 
 type Repository struct {
@@ -18,9 +20,6 @@ type Repository struct {
 }
 
 func NewRepository(db *sqlx.DB) *Repository {
-	if db == nil {
-		logrus.Errorf("db is nil in NewRepository func")
-	}
 	return &Repository{
 		Article: NewArticleRepository(db),
 	}

@@ -4,6 +4,7 @@ import (
 	blogging "blogging_app"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -16,9 +17,6 @@ type ArticleRepository struct {
 }
 
 func NewArticleRepository(db *sqlx.DB) *ArticleRepository {
-	if db == nil {
-		logrus.Errorf("db is nil in NewArticleRepository func")
-	}
 	return &ArticleRepository{db: db}
 }
 
@@ -48,4 +46,75 @@ func (r *ArticleRepository) GetAll() ([]blogging.Article, error) {
 	}
 
 	return articles, nil
+}
+
+func (r *ArticleRepository) GetByID(id uuid.UUID) (blogging.Article, error) {
+	query := fmt.Sprintf("SELECT * FROM %s WHERE id = $1", articleTable)
+	var article blogging.Article
+	err := r.db.Get(&article, query, id)
+	if err != nil {
+		return blogging.Article{}, err
+	}
+
+	return article, nil
+}
+
+func (r *ArticleRepository) Update(id uuid.UUID, input blogging.ArticleToUpdate) error {
+	//title = $1, description = $2, tags = $3, updated_at = $4
+	argId := 1
+	var args []string
+	var argsValues []interface{}
+	if input.Title != "" {
+		args = append(args, fmt.Sprintf("title = $%d", argId))
+		argsValues = append(argsValues, input.Title)
+		argId++
+	}
+
+	if input.Description != "" {
+		args = append(args, fmt.Sprintf("description = $%d", argId))
+		argsValues = append(argsValues, input.Description)
+		argId++
+	}
+
+	if input.Tags != nil {
+		args = append(args, fmt.Sprintf("tags = $%d", argId))
+		argsValues = append(argsValues, input.Tags)
+		argId++
+	}
+
+	updated_at := "NOW()"
+	args = append(args, fmt.Sprintf("updated_at = $%d", argId))
+	argsValues = append(argsValues, updated_at)
+	argId++
+
+	argStr := strings.Join(args, ",")
+	argsValues = append(argsValues, id)
+	logrus.Print(fmt.Sprintf("UPDATE %s SET %s WHERE id = $%d", articleTable, argStr, argId))
+	logrus.Print(argsValues...)
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE id = $%d", articleTable, argStr, argId)
+	_, err := r.db.Exec(query, argsValues...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *ArticleRepository) Delete(id uuid.UUID) error {
+	query := fmt.Sprintf("DELETE FROM %s WHERE id = $1", articleTable)
+	res, err := r.db.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return errors.New("no rows deleted, id not found")
+	}
+
+	return nil
 }

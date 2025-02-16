@@ -23,6 +23,9 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		{
 			articles.POST("/", h.CreateArticle)
 			articles.GET("/", h.GetAllArticles)
+			articles.GET("/:id", h.GetArticleByID)
+			articles.PUT("/:id", h.UpdateArticle)
+			articles.DELETE("/:id", h.DeleteArticle)
 		}
 	}
 

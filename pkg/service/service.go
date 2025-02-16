@@ -10,6 +10,9 @@ import (
 type Article interface {
 	Create(input blogging.Article) (uuid.UUID, error)
 	GetAll() ([]blogging.Article, error)
+	GetByID(id uuid.UUID) (blogging.Article, error)
+	Update(id uuid.UUID, input blogging.ArticleToUpdate) error
+	Delete(id uuid.UUID) error
 }
 
 type Service struct {
